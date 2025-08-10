@@ -41,7 +41,7 @@ def search(query: str, limit: int = 5):
 
 # ----------- Demo -----------
 if __name__ == "__main__":
-    folder = input("Enter folder path with .txt files: ").strip()
+    folder = os.path.join("Archive")
     load_texts(folder)
 
     while True:
