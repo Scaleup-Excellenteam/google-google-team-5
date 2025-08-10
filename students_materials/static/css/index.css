@@ -1,15 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
 body {
-  background: linear-gradient(135deg, #4285F4, #1a73e8); /* גווני כחול גוגל */
+  background: linear-gradient(135deg, #4285F4, #1a73e8);
   font-family: 'Inter', sans-serif;
   display: flex;
   height: 100vh;
   margin: 0;
   justify-content: center;
-  align-items: flex-start; /* תיבה תהיה למעלה */
-  padding-top: 80px; /* הרחקה מהקצה העליון */
-  color: #202124; /* טקסט כהה יותר */
+  align-items: flex-start;
+  padding-top: 80px;
+  color: #202124;
 }
 
 .search-container {
@@ -17,19 +17,19 @@ body {
   padding: 20px 30px;
   border-radius: 24px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  backdrop-filter: none; /* בלי טשטוש */
+  backdrop-filter: none;
   display: flex;
   gap: 12px;
   max-width: 480px;
   width: 100%;
   align-items: center;
-  margin-top: 0; /* מעלית למעלה */
+  margin-top: 0;
 }
 
 .search-wrapper {
   display: flex;
-  flex-direction: column; /* מבטיח שהחיפוש והתוצאות יהיו אחד מתחת לשני */
-  align-items: center;    /* ממקם במרכז */
+  flex-direction: column;
+  align-items: center;
   width: 100%;
   max-width: 480px;
 }
@@ -76,22 +76,22 @@ button:active {
 #resultsBox {
   max-width: 480px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.9); /* כמו search-container */
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* צל תואם */
-  margin-top: 12px; /* רווח מעל */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  margin-top: 12px;
   padding: 12px 16px;
-  color: #202124; /* אותו צבע טקסט */
+  color: #202124;
   font-size: 16px;
   max-height: 300px;
   overflow-y: auto;
   box-sizing: border-box;
-  backdrop-filter: none; /* אחידות */
+  backdrop-filter: none;
 }
 
 .result-item {
   padding: 8px 0;
-  border-bottom: 1px solid #dadce0; /* תואם למסגרת של האינפוט */
+  border-bottom: 1px solid #dadce0;
 }
 
 .result-item:last-child {
@@ -99,7 +99,7 @@ button:active {
 }
 
 .result-item small {
-  color: #5f6368; /* אפור עדין כמו בגוגל */
+  color: #5f6368;
   font-size: 14px;
   display: block;
   margin-top: 4px;

@@ -3,23 +3,52 @@
     <head>
         <meta charset="UTF-8" />
         <title>Autocomplete Search UI</title>
-        <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}" />
-
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}" />
     </head>
     <body>
-        
-
       <div class="search-wrapper">
         <div class="search-container">
-            <input id="searchInput" type="text" placeholder="Enter search term..." />
-            <button id="searchButton" type="submit">Search</button>
-            <div id="loading" style="display:none; color: #666; margin-top: 8px;">Loading...</div>
+            <input id="searchInput" type="text" placeholder="Enter search term..." disabled />
+            <button id="searchButton" type="submit" disabled>Loading...</button>
+            <div id="loading" style="color: #666; margin-top: 8px;"></div>
         </div>
 
         <div id="resultsBox"></div>
     </div>
 
-        
-        <script src="{{ url_for('static', filename='index.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+    <script>
+      // check if the server data ready
+      async function checkStatus() {
+        try {
+          const response = await fetch('/status');
+          if (!response.ok) throw new Error('Network error');
+          const data = await response.json();
+
+          const loadingDiv = document.getElementById('loading');
+          const input = document.getElementById('searchInput');
+          const button = document.getElementById('searchButton');
+
+          if (data.loaded) {
+            loadingDiv.style.display = 'none';
+            input.disabled = false;
+            button.disabled = false;
+            button.textContent = 'Search';
+          } else {
+            loadingDiv.style.display = 'block';
+            input.disabled = true;
+            button.disabled = true;
+            button.textContent = 'Loading...';
+            setTimeout(checkStatus, 1000);
+          }
+        } catch (e) {
+          setTimeout(checkStatus, 1000);
+        }
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+        checkStatus();
+      });
+    </script>
     </body>
 </html>

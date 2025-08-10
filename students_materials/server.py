@@ -1,10 +1,16 @@
 from flask import Flask, jsonify, request, render_template
+import threading
+import time
 from text_data import load_texts, search
 
 app = Flask(__name__)
 
-# load files before server runnig
-load_texts('Archive')
+data_loaded = False
+
+def load_data_thread():
+    global data_loaded
+    load_texts('Archive')
+    data_loaded = True
 
 @app.route('/')
 def home():
@@ -12,6 +18,10 @@ def home():
 
 @app.route('/search')
 def search_api():
+    global data_loaded
+    if not data_loaded:
+        return jsonify({"error": "Data is still loading"}), 503
+
     query = request.args.get('q', '')
     if not query:
         return jsonify([])
@@ -26,5 +36,12 @@ def search_api():
         })
     return jsonify(output)
 
+@app.route('/status')
+def status():
+    return jsonify({"loaded": data_loaded})
+
 if __name__ == '__main__':
+    thread = threading.Thread(target=load_data_thread)
+    thread.start()
+
     app.run(debug=True)
