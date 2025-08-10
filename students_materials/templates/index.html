@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Autocomplete Search UI</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}" />
+
+    </head>
+    <body>
+        
+
+      <div class="search-wrapper">
+        <div class="search-container">
+            <input id="searchInput" type="text" placeholder="Enter search term..." />
+            <button id="searchButton" type="submit">Search</button>
+            <div id="loading" style="display:none; color: #666; margin-top: 8px;">Loading...</div>
+        </div>
+
+        <div id="resultsBox"></div>
+    </div>
+
+        
+        <script src="{{ url_for('static', filename='index.js') }}"></script>
+    </body>
+</html>
