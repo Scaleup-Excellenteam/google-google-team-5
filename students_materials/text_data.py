@@ -1,58 +1,65 @@
-import os 
-import re 
+# text_data.py
+from __future__ import annotations
+from dataclasses import dataclass
+import os
+import re
+import string
+from typing import Iterable, List
 
-# ----------- Global storage for sentences -----------
-records = []  # list of dicts: {original, normalized, file_path, line_number}
+# translate punctuation → space (so words don't stick together after removal)
+_PUNCT_TABLE = str.maketrans({c: " " for c in string.punctuation})
 
-# ----------- Helper: normalize a sentence -----------
 def normalize(text: str) -> str:
-    text = text.lower()
-    text = re.sub(r"[^\w\s]", " ", text)   # remove punctuation
-    text = re.sub(r"\s+", " ", text)       # collapse spaces
+    """
+    Normalize text for matching:
+    - lowercase
+    - remove punctuation (as spaces)
+    - collapse multiple spaces
+    """
+    text = text.lower().translate(_PUNCT_TABLE)
+    text = re.sub(r"\s+", " ", text)
     return text.strip()
 
-# ----------- Load all text files -----------
-def load_texts(folder_path: str):
-    """Load all .txt files from folder_path recursively into records."""
-    records.clear()
-    for root, _, files in os.walk(folder_path):
-        for file in files:
-            if file.lower().endswith(".txt"):
+@dataclass
+class SentenceRecord:
+    original: str       # original (with punctuation)
+    normalized: str     # normalized for matching
+    file_path: str
+    line_number: int
+
+class TextDatabase:
+    """Loads .txt files (recursively) and stores sentence records."""
+    def __init__(self) -> None:
+        self._records: List[SentenceRecord] = []
+
+    @staticmethod
+    def normalize(text: str) -> str:
+        return normalize(text)
+
+    def load(self, folder_path: str) -> int:
+        self._records.clear()
+        for root, _, files in os.walk(folder_path):
+            for file in files:
+                if not file.lower().endswith(".txt"):
+                    continue
                 file_path = os.path.join(root, file)
                 with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                    for line_number, line in enumerate(f, start=1):
+                    for ln, line in enumerate(f, start=1):
                         line = line.strip()
                         if not line:
                             continue
-                        records.append({
-                            "original": line,
-                            "normalized": normalize(line),
-                            "file_path": file_path,
-                            "line_number": line_number
-                        })
-    print(f"✅ Loaded {len(records)} sentences from {folder_path}")
+                        self._records.append(
+                            SentenceRecord(
+                                original=line,
+                                normalized=normalize(line),
+                                file_path=file_path,
+                                line_number=ln,
+                            )
+                        )
+        return len(self._records)
 
-# ----------- Search for a query -----------
-def search(query: str, limit: int = 5):
-    """Search for query in the loaded records and return top matches."""
-    q_norm = normalize(query)
-    matches = [r for r in records if q_norm in r["normalized"]]
-    return matches[:limit]
+    def __len__(self) -> int:
+        return len(self._records)
 
-# ----------- Demo -----------
-if __name__ == "__main__":
-    folder = input("Enter folder path with .txt files: ").strip()
-    load_texts(folder)
-
-    while True:
-        q = input("\nSearch (or 'exit'): ").strip()
-        if q.lower() == "exit":
-            break
-        results = search(q)
-        if not results:
-            print("No matches found.")
-        else:
-            print("\nSearch results:")
-            for idx, r in enumerate(results, start=1):
-                file_name = os.path.basename(r["file_path"])
-                print(f"{idx}. {r['original']}  [File: {file_name}, Line: {r['line_number']}]")
+    def records(self) -> Iterable[SentenceRecord]:
+        return self._records
