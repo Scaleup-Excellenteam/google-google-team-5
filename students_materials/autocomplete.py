@@ -8,19 +8,36 @@ from text_data import TextDatabase, Sentence
 
 # ---------------- Normalization helpers ----------------
 
-_PUNC_SET = set(string.punctuation)
+_PUNC_SET = set(string.punctuation) # signs in strings.
 
 def _normalize(s: str) -> str:
     """
-    Lowercase, remove punctuation (replace with space),
-    collapse spaces, strip ends.
+    Lowercases the string, replaces punctuation with spaces,
+    collapses multiple spaces into one, and strips leading/trailing spaces.
+
+    Args:
+        s (str): The input string to normalize.
+
+    Returns:
+        str: The normalized string.
     """
     s = ''.join(ch.lower() if ch not in _PUNC_SET else ' ' for ch in s)
     s = re.sub(r'\s+', ' ', s).strip()
     return s
 
 def _penalty_replace(pos_1based: int) -> int:
-    # Replacement penalties
+    """
+    Calculates the penalty score for replacing a character,
+    based on its 1-based position in the string.
+
+    Higher penalties are given for earlier positions.
+
+    Args:
+        pos_1based (int): The position in 1-based indexing (1 is the first position).
+
+    Returns:
+        int: The penalty score associated with the given position.
+    """
     if pos_1based == 1: return 5
     if pos_1based == 2: return 4
     if pos_1based == 3: return 3
@@ -28,7 +45,18 @@ def _penalty_replace(pos_1based: int) -> int:
     return 1
 
 def _penalty_add_or_miss(pos_1based: int) -> int:
-    # Insertion/Deletion penalties
+    """
+    Calculates the penalty score for adding or missing a character,
+    based on its 1-based position in the string.
+
+    Higher penalties are given for earlier positions.
+
+    Args:
+        pos_1based (int): The position in 1-based indexing (1 is the first position).
+
+    Returns:
+        int: The penalty score associated with the given position.
+    """
     if pos_1based == 1: return 10
     if pos_1based == 2: return 8
     if pos_1based == 3: return 6
