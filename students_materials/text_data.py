@@ -13,7 +13,8 @@ class TextDatabase:
 
     def __init__(self) -> None:
         self.items: List[Tuple[str, str, int, str]] = []
-        self._gram_index: Dict[str, List[int]] = defaultdict(list)
+        self._gram_index: Dict[str, List[int]] = defaultdict(list)         # forward trigrams
+        self._rev_gram_index: Dict[str, List[int]] = defaultdict(list)     # reverse trigrams
         self._loaded = False
 
 
@@ -59,22 +60,26 @@ class TextDatabase:
             root_folder (str): Path to the root folder containing .txt files.
 
         Process:
-            - Clears existing data and index.
+            - Clears existing data and indexes.
             - Opens each .txt file found.
             - Reads each line, normalizes it.
             - Stores tuple of (original line, file path, line number, normalized line).
-            - Indexes each unique character trigram of the normalized line.
+            - Indexes each unique character trigram of the normalized line (forward).
+            - Indexes each unique character trigram of the reversed normalized line (reverse).
+            This reverse trigram index improves search robustness especially
+            when the query contains errors near the beginning.
         """
 
         pickle_path = os.path.join(os.path.dirname(__file__), "cache.pkl")
         if self._load_pickle(pickle_path):
             self._loaded = True
-            return  # loaded successfully
-
+            return
 
         self.items.clear()
         self._gram_index.clear()
+        self._rev_gram_index.clear()
         files_num = 0
+
         for dirpath, _, filenames in os.walk(root_folder):
             for fn in filenames:
                 if not fn.lower().endswith('.txt'):
@@ -88,11 +93,20 @@ class TextDatabase:
                             continue
                         idx = len(self.items)
                         self.items.append((original, fpath, i, norm))
-                        seen = set()
+
+                        seen_forward = set()
                         for g in _trigrams(norm):
-                            if g not in seen:
+                            if g not in seen_forward:
                                 self._gram_index[g].append(idx)
-                                seen.add(g)
+                                seen_forward.add(g)
+
+                        rev_norm = norm[::-1]
+                        seen_reverse = set()
+                        for g in _trigrams(rev_norm):
+                            if g not in seen_reverse:
+                                self._rev_gram_index[g].append(idx)
+                                seen_reverse.add(g)
+
                 files_num += 1
                 print(f'loading {files_num}')
 
@@ -109,6 +123,9 @@ class TextDatabase:
         that share character trigrams with the query, ranked by number of shared trigrams
         and normalized sentence length.
 
+        ***This method uses both forward and reverse trigram indices to improve recall,
+        especially when the query has typos or errors near the start.***
+
         Args:
             q_norm (str): The normalized query string.
             cap (int, optional): Maximum number of candidates to return. Defaults to 500.
@@ -118,16 +135,24 @@ class TextDatabase:
         """
         if not self._loaded or not q_norm:
             return []
-        grams = list(_trigrams(q_norm))
-        if not grams:
-            return []
-        counts: Dict[int, int] = defaultdict(int)
-        for g in grams:
+
+        grams_forward = list(_trigrams(q_norm))
+        grams_reverse = list(_trigrams(q_norm[::-1]))
+
+        counts = defaultdict(int)
+
+        for g in grams_forward:
             for idx in self._gram_index.get(g, ()):
                 counts[idx] += 1
+
+        for g in grams_reverse:
+            for idx in self._rev_gram_index.get(g, ()):
+                counts[idx] += 1
+
         if not counts:
             first = q_norm[0]
             rough = [i for i, (_, _, _, s) in enumerate(self.items) if first in s]
             return rough[:cap]
+
         ranked = sorted(counts.items(), key=lambda kv: (-kv[1], len(self.items[kv[0]][3])))
         return [idx for idx, _ in ranked[:cap]]
