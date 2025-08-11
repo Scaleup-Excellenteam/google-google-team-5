@@ -1,6 +1,7 @@
 from typing import List, Tuple, Dict
 from collections import defaultdict
 import os
+import pickle
 from trigram import _normalize, _trigrams
 
 class TextDatabase:
@@ -15,10 +16,44 @@ class TextDatabase:
         self._gram_index: Dict[str, List[int]] = defaultdict(list)
         self._loaded = False
 
+
+    def _load_pickle(self, pickle_path: str) -> bool:
+        """
+        Try to load the database from a pickle file.
+        Returns True if successful, False otherwise.
+        """
+        if not os.path.exists(pickle_path):
+            return False
+        try:
+            with open(pickle_path, "rb") as f:
+                data = pickle.load(f)
+            self.items = data["items"]
+            self._gram_index = data["gram_index"]
+            self._loaded = True
+            print(f"Loaded database from pickle cache: {pickle_path}")
+            return True
+        except (pickle.UnpicklingError, EOFError, KeyError, Exception) as e:
+            print(f"[WARN] Failed to load pickle cache '{pickle_path}': {e}")
+            return False
+
+    def _save_pickle(self, pickle_path: str) -> None:
+        """
+        Save the database to a pickle file.
+        """
+        try:
+            with open(pickle_path, "wb") as f:
+                pickle.dump({
+                    "items": self.items,
+                    "gram_index": self._gram_index
+                }, f)
+            print(f"Saved database pickle cache: {pickle_path}")
+        except Exception as e:
+            print(f"[WARN] Failed to save pickle cache '{pickle_path}': {e}")
+
     def load(self, root_folder: str) -> None:
         """
-        Recursively walks through the given folder, loads all .txt files,
-        and indexes their lines as sentences.
+        Load database from pickle cache if available,
+        otherwise load recursively from text files and save pickle.
 
         Args:
             root_folder (str): Path to the root folder containing .txt files.
@@ -30,6 +65,13 @@ class TextDatabase:
             - Stores tuple of (original line, file path, line number, normalized line).
             - Indexes each unique character trigram of the normalized line.
         """
+
+        pickle_path = os.path.join(os.path.dirname(__file__), "cache.pkl")
+        if self._load_pickle(pickle_path):
+            self._loaded = True
+            return  # loaded successfully
+
+
         self.items.clear()
         self._gram_index.clear()
         files_num = 0
@@ -53,8 +95,10 @@ class TextDatabase:
                                 seen.add(g)
                 files_num += 1
                 print(f'loading {files_num}')
+
+        self._save_pickle(pickle_path)
         self._loaded = True
-        print(f'{files_num} txt files loaded')
+        
 
     def __len__(self) -> int:
         return len(self.items)
