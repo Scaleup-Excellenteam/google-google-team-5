@@ -13,8 +13,8 @@ data_loaded = False
 def load_data_thread():
     global db, ac, data_loaded
     db = TextDatabase()
-    db.load("Archive")  # טוען את כל קבצי הטקסט
-    ac = AutoCompleter(db)  # יוצר את מחפש ההשלמות
+    db.load("Archive")
+    ac = AutoCompleter(db)
     data_loaded = True
 
 

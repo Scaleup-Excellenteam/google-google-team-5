@@ -1,58 +1,38 @@
-# text_data.py
-from __future__ import annotations
-from dataclasses import dataclass
-from typing import List, Tuple, Dict, Iterable
-import os
-import re
-import string
+from typing import List, Tuple, Dict
 from collections import defaultdict
-
-_PUNC_SET = set(string.punctuation)  # punctuation is ignored for scoring (replaced by spaces)
-
-def _normalize(s: str) -> str:
-    """
-    Lowercase, replace punctuation with spaces, collapse spaces.
-    Spaces count; punctuation doesn't.
-    """
-    s = ''.join((ch.lower() if ch not in _PUNC_SET else ' ') for ch in s)
-    s = re.sub(r'\s+', ' ', s).strip()
-    return s
-
-def _trigrams(s: str) -> Iterable[str]:
-    """Yield overlapping character trigrams (3-grams). For strings < 3, yield the whole string."""
-    if len(s) < 3:
-        if s:
-            yield s
-        return
-    for i in range(len(s) - 2):
-        yield s[i:i+3]
-
-@dataclass
-class AutoCompleteData:
-    completed_sentence: str    # original sentence (with punctuation/casing)
-    source_text: str           # file path
-    offset: int                # 1-based line number
-    score: int
+import os
+from trigram import _normalize, _trigrams
 
 class TextDatabase:
     """
-    Loads a folder of .txt files, keeps both original and normalized sentences,
-    and builds a character trigram inverted index for fast candidate pruning.
+    Manages loading and indexing of text data from .txt files in a folder tree.
+    Each line in the files is treated as a sentence, stored with metadata,
+    and indexed by character trigrams for efficient candidate retrieval.
     """
+
     def __init__(self) -> None:
         self.items: List[Tuple[str, str, int, str]] = []
-        # List of tuples: (original_sentence, file_path, line_number, normalized_sentence)
         self._gram_index: Dict[str, List[int]] = defaultdict(list)
         self._loaded = False
 
     def load(self, root_folder: str) -> None:
         """
-        Walks the folder tree and loads all .txt files.
-        Each line is treated as a sentence.
+        Recursively walks through the given folder, loads all .txt files,
+        and indexes their lines as sentences.
+
+        Args:
+            root_folder (str): Path to the root folder containing .txt files.
+
+        Process:
+            - Clears existing data and index.
+            - Opens each .txt file found.
+            - Reads each line, normalizes it.
+            - Stores tuple of (original line, file path, line number, normalized line).
+            - Indexes each unique character trigram of the normalized line.
         """
         self.items.clear()
         self._gram_index.clear()
-
+        files_num = 0
         for dirpath, _, filenames in os.walk(root_folder):
             for fn in filenames:
                 if not fn.lower().endswith('.txt'):
@@ -66,21 +46,31 @@ class TextDatabase:
                             continue
                         idx = len(self.items)
                         self.items.append((original, fpath, i, norm))
-                        # index by character trigrams
                         seen = set()
                         for g in _trigrams(norm):
                             if g not in seen:
                                 self._gram_index[g].append(idx)
                                 seen.add(g)
+                files_num += 1
+                print(f'loading {files_num}')
         self._loaded = True
+        print(f'{files_num} txt files loaded')
 
     def __len__(self) -> int:
         return len(self.items)
 
     def candidates_by_query(self, q_norm: str, cap: int = 500) -> List[int]:
         """
-        Use trigram postings to collect likely candidates.
-        Fall back to scanning if query is tiny or unseen.
+        Given a normalized query string, retrieve a list of candidate sentence indices
+        that share character trigrams with the query, ranked by number of shared trigrams
+        and normalized sentence length.
+
+        Args:
+            q_norm (str): The normalized query string.
+            cap (int, optional): Maximum number of candidates to return. Defaults to 500.
+
+        Returns:
+            List[int]: List of indices into `self.items` representing candidate sentences.
         """
         if not self._loaded or not q_norm:
             return []
@@ -88,16 +78,12 @@ class TextDatabase:
         if not grams:
             return []
         counts: Dict[int, int] = defaultdict(int)
-        # collect posting hits
         for g in grams:
             for idx in self._gram_index.get(g, ()):
                 counts[idx] += 1
         if not counts:
-            # tiny/rare query: return a small random-like slice (but deterministic) to keep latency bounded
-            # Prefer sentences that contain the first character at least
             first = q_norm[0]
             rough = [i for i, (_, _, _, s) in enumerate(self.items) if first in s]
             return rough[:cap]
-        # rank by number of shared grams (desc), then by shorter normalized sentence
         ranked = sorted(counts.items(), key=lambda kv: (-kv[1], len(self.items[kv[0]][3])))
         return [idx for idx, _ in ranked[:cap]]
