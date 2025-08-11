@@ -12,6 +12,7 @@ def main():
     print("Type 'exit' to quit.")
     while True:
         q = input("query: ").strip()
+
         if not q:
             continue
         if q.lower() == "exit":

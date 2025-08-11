@@ -70,7 +70,7 @@ class TextDatabase:
             when the query contains errors near the beginning.
         """
 
-        pickle_path = os.path.join(os.path.dirname(__file__), "cache.pkl")
+        pickle_path = os.path.join(os.path.dirname(__file__), "cache-with-reverse.pkl")
         if self._load_pickle(pickle_path):
             self._loaded = True
             return
