@@ -65,94 +65,152 @@ def _penalty_add_or_miss(pos_1based: int) -> int:
 
 def _score_pair(q_norm: str, cand_norm: str) -> Tuple[bool, int]:
     """
-    Return (is_match, score) between normalized query and candidate substring.
-    Allow at most ONE correction: replace / insert / delete.
+    Compare a normalized query (q_norm) with a normalized candidate substring (cand_norm)
+    and return a tuple: (is_match, score).
+
+    The function allows at most ONE correction:
+    - Replace one character
+    - Insert one character
+    - Delete one character
     """
+
+    # Lengths of query and candidate
     n, m = len(q_norm), len(cand_norm)
+
+    # If either string is empty → no match
     if n == 0 or m == 0:
         return (False, 0)
 
-    base_equal = 2 * n
-    base_unequal = 2 * min(n, m)
+    # Base scores: higher for exact length match
+    base_equal = 2 * n               # Score for perfect equal-length match
+    base_unequal = 2 * min(n, m)     # Score for slightly unequal length matches
 
-    # Case 1: Same length => possible match or 1 replacement
+    # ---------------- Case 1: Equal length → possible replacement ----------------
     if n == m:
+        # Find all positions where characters differ
         diffs = [i for i, (a, b) in enumerate(zip(q_norm, cand_norm), start=1) if a != b]
+
         if not diffs:
+            # Exact match → return full score
             return True, base_equal
+
         if len(diffs) == 1:
+            # One letter difference → allowed replacement
             return True, base_equal - _penalty_replace(diffs[0])
+
+        # More than one difference → not allowed
         return False, 0
 
-    # Case 2: Query longer by 1 => insertion in query (remove one letter)
+    # ---------------- Case 2: Query is longer by 1 → possible deletion ----------------
     if n == m + 1:
         i = j = 0
-        skip_pos = None
+        skip_pos = None  # Position where the extra letter is skipped
+
         while i < n and j < m:
             if q_norm[i] == cand_norm[j]:
-                i += 1; j += 1
+                # Characters match → move both pointers
+                i += 1
+                j += 1
             else:
                 if skip_pos is not None:
+                    # More than one mismatch → not allowed
                     return (False, 0)
-                skip_pos = i + 1
-                i += 1
+                skip_pos = i + 1  # Record where we skipped
+                i += 1            # Move only query pointer
+
+        # If no skip happened, extra char is at the end
         if skip_pos is None:
             skip_pos = n
+
+        # Return score after applying deletion penalty
         return True, base_unequal - _penalty_add_or_miss(skip_pos)
 
-    # Case 3: Query shorter by 1 => missing letter in query (add one letter)
+    # ---------------- Case 3: Query is shorter by 1 → possible insertion ----------------
     if m == n + 1:
         i = j = 0
-        miss_pos = None
+        miss_pos = None  # Position where an extra char exists in candidate
+
         while i < n and j < m:
             if q_norm[i] == cand_norm[j]:
-                i += 1; j += 1
+                i += 1
+                j += 1
             else:
                 if miss_pos is not None:
+                    # More than one mismatch → not allowed
                     return (False, 0)
-                miss_pos = j + 1
-                j += 1
+                miss_pos = j + 1  # Record where we inserted
+                j += 1            # Move only candidate pointer
+
+        # If no mismatch found, the extra char is at the end
         if miss_pos is None:
             miss_pos = m
+
+        # Return score after applying insertion penalty
         return True, base_unequal - _penalty_add_or_miss(miss_pos)
 
-    # Anything else => needs >1 edit
+    # ---------------- Case 4: More than 1 edit needed ----------------
     return (False, 0)
+
 
 def score_query_against_sentence(query: str, sentence_original: str) -> int:
     """
-    Calculate max score of query vs sentence.
-    Only consider matches starting/ending on word boundaries,
-    and only alphabetic substrings (letters + spaces).
+    Calculate the maximum possible score of a query against a sentence.
+
+    Rules:
+    - Matches must start/end on word boundaries (spaces)
+    - Only alphabetic substrings (letters + spaces) are considered
+    - Allows at most ONE edit (replace/insert/delete)
     """
+
+    # Normalize query and sentence (remove punctuation, lowercase, etc.)
     q = _normalize(query)
     s = _normalize(sentence_original)
+
+    # If either is empty → no match
     if not q or not s:
         return 0
 
-    best = 0
+    best = 0  # Track best score found
+
+    # Possible candidate lengths to check:
+    # - same length as query
+    # - 1 less
+    # - 1 more
     lengths = {len(q) - 1, len(q), len(q) + 1}
+
     for L in lengths:
+        # Skip invalid lengths
         if L <= 0 or L > len(s):
             continue
+
+        # Slide a window of length L over the sentence
         for start in range(0, len(s) - L + 1):
+            # Ensure match starts at word boundary
             if start > 0 and s[start - 1] != ' ':
                 continue
+
             end = start + L
+
+            # Ensure match ends at word boundary
             if end < len(s) and s[end] != ' ':
                 continue
 
+            # Extract candidate substring
             cand = s[start:end]
 
-            # NEW: only letters+spaces, to avoid matches like "27 be"
-            # (התקן מדבר על "letters including space but not punctuation")
+            # Ensure only letters + spaces are considered
             if not re.fullmatch(r"[a-z ]+", cand):
                 continue
 
+            # Compare query vs candidate
             ok, sc = _score_pair(q, cand)
+
+            # Update best score if match found
             if ok and sc > best:
                 best = sc
+
     return best
+
 
 # ---------------- Public API ----------------
 
