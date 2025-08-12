@@ -17,7 +17,7 @@ def test_norm_caching(mock_db):
     ac = AutoCompleter(mock_db)
     with patch("project.autocomplete._normalize", return_value="normalized") as mock_norm:
         result1 = ac._norm("Query")
-        result2 = ac._norm("Query")  # אמור להגיע מה־cache, לא לקרוא שוב
+        result2 = ac._norm("Query")
         assert result1 == "normalized"
         assert result2 == "normalized"
         mock_norm.assert_called_once_with("Query")
@@ -32,7 +32,6 @@ def test_get_best_k_completions_empty_query(mock_db):
 def test_get_best_k_completions_with_matches(mock_db):
     ac = AutoCompleter(mock_db)
 
-    # מדמים ניקוד: פריט ראשון יקבל ניקוד 10, השני 5
     with patch("project.autocomplete._normalize", return_value="hello") as mock_norm, \
          patch("project.autocomplete._best_substring_score", side_effect=[10, 5]) as mock_score:
         
@@ -44,7 +43,6 @@ def test_get_best_k_completions_with_matches(mock_db):
         assert results[1].completed_sentence == "Hi There"
         assert results[0].score == 10
         assert results[1].score == 5
-        # בדיקת סדר: הכי גבוה ראשון
         assert results[0].score >= results[1].score
 
 def test_get_best_k_completions_no_positive_score(mock_db):
