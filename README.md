@@ -11,6 +11,7 @@ If this is your first time running the project, execute the following command in
 ```bash
 python main.py
 ```
+* **Note:** Ensure that an `Archive` directory exists in the same path as `main.py`.
 
 ### Running the Web Interface
 To start the graphical web interface using Flask:

@@ -83,7 +83,7 @@ class TextDatabase:
                 with open(fpath, 'r', encoding='utf-8', errors='ignore') as f:
                     for i, line in enumerate(f, start=1):
                         original = line.strip()
-                        if not original:
+                        if not original: # Ignore empty lines
                             continue
                         norm = _normalize(original)
                         if not norm:
