@@ -82,7 +82,9 @@ class TextDatabase:
                 fpath = os.path.join(dirpath, fn)
                 with open(fpath, 'r', encoding='utf-8', errors='ignore') as f:
                     for i, line in enumerate(f, start=1):
-                        original = line.rstrip('\n')
+                        original = line.strip()
+                        if not original:
+                            continue
                         norm = _normalize(original)
                         if not norm:
                             continue
@@ -93,6 +95,7 @@ class TextDatabase:
                             if g not in seen:
                                 self._gram_index[g].append(idx)
                                 seen.add(g)
+
                 files_num += 1
                 print(f'loading {files_num}')
 
