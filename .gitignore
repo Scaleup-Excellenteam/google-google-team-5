@@ -1,2 +1,4 @@
 Archive
 __pycache__
+cache.pkl
+cache-with-reverse.pkl
